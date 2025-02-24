@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Egg Emergency</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three-toon-shader@1.0.0/index.js"></script>
+</head>
+<body>
+    <div id="loading-screen">
+        <div class="loading-container">
+            <img src="assets/logo.png" alt="Egg Emergency Logo" class="logo">
+            <div class="loading-bar-container">
+                <div class="loading-bar"></div>
+            </div>
+            <p>Loading Game Assets...</p>
+        </div>
+    </div>
+    
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+        
+        <div id="ui-container">
+            <div id="score-container">
+                <div class="player-score" id="player-score">
+                    <div class="player-icon human"></div>
+                    <div class="score-value">0</div>
+                </div>
+                <div class="player-score" id="ai1-score">
+                    <div class="player-icon novice"></div>
+                    <div class="score-value">0</div>
+                </div>
+                <div class="player-score" id="ai2-score">
+                    <div class="player-icon intermediate"></div>
+                    <div class="score-value">0</div>
+                </div>
+                <div class="player-score" id="ai3-score">
+                    <div class="player-icon expert"></div>
+                    <div class="score-value">0</div>
+                </div>
+            </div>
+            
+            <div id="timer-container">
+                <div id="timer">60</div>
+            </div>
+        </div>
+        
+        <div id="game-start-screen" class="game-screen">
+            <h1>Egg Emergency</h1>
+            <div class="menu-options">
+                <button id="start-game">Start Game</button>
+                <button id="tutorial">Tutorial</button>
+            </div>
+        </div>
+        
+        <div id="tutorial-screen" class="game-screen">
+            <h2>How to Play</h2>
+            <div class="tutorial-content">
+                <div class="tutorial-step">
+                    <img src="assets/tutorial1.png" alt="Move left and right">
+                    <p>Move Chansey left and right to catch eggs</p>
+                </div>
+                <div class="tutorial-step">
+                    <img src="assets/tutorial2.png" alt="Transfer eggs">
+                    <p>Transfer eggs to the basket</p>
+                </div>
+                <div class="tutorial-step">
+                    <img src="assets/tutorial3.png" alt="Special eggs">
+                    <p>Golden eggs are worth 3 points! Avoid bomb eggs!</p>
+                </div>
+            </div>
+            <button id="back-to-menu">Back to Menu</button>
+        </div>
+        
+        <div id="game-over-screen" class="game-screen">
+            <h2>Game Over!</h2>
+            <div id="final-scores"></div>
+            <button id="play-again">Play Again</button>
+        </div>
+        
+        <div id="creator-info-button">i</div>
+        
+        <div id="creator-info-modal">
+            <div class="modal-content">
+                <span class="close-button">&times;</span>
+                <h3>About This Game</h3>
+                <p>Created by Alex Meckes</p>
+                <p>Made with Cursor .46 + Claude 3.7 and ~2 prompts</p>
+                <p>~3,000 lines of vibe coding</p>
+                <div class="social-links">
+                    <a href="https://twitter.com/AlexMeckes" target="_blank">Twitter: @AlexMeckes</a>
+                    <a href="https://github.com/alexmeckes" target="_blank">GitHub: alexmeckes</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/audio.js"></script>
+    <script src="js/models.js"></script>
+    <script src="js/ai.js"></script>
+    <script src="js/particles.js"></script>
+    <script src="js/game.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html> 

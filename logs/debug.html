@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pokémon Stadium - Egg Emergency (Debug)</title>
+    <link rel="stylesheet" href="../styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three-toon-shader@1.0.0/index.js"></script>
+    <script>
+        // Debug logging
+        window.addEventListener('error', function(e) {
+            console.error('Global error:', e.message, 'at', e.filename, 'line', e.lineno);
+            document.getElementById('debug-log').innerHTML += `<p class="error">ERROR: ${e.message} at ${e.filename} line ${e.lineno}</p>`;
+        });
+        
+        // Overwrite the updateLoadingProgress function to add more logging
+        window.addEventListener('DOMContentLoaded', function() {
+            // Give time for scripts to load
+            setTimeout(() => {
+                if (typeof updateLoadingProgress !== 'function') {
+                    console.error('updateLoadingProgress function not found');
+                    document.getElementById('debug-log').innerHTML += `<p class="error">ERROR: updateLoadingProgress function not found</p>`;
+                } else {
+                    const originalUpdateLoadingProgress = window.updateLoadingProgress;
+                    window.updateLoadingProgress = function(percent) {
+                        console.log(`Loading progress: ${percent}%`);
+                        document.getElementById('debug-log').innerHTML += `<p>Loading progress: ${percent}%</p>`;
+                        
+                        const loadingBar = document.querySelector('.loading-bar');
+                        if (loadingBar) {
+                            loadingBar.style.width = `${percent}%`;
+                            console.log(`Set loading bar width to ${percent}%`);
+                        } else {
+                            console.error('Loading bar element not found');
+                            document.getElementById('debug-log').innerHTML += `<p class="error">ERROR: Loading bar element not found</p>`;
+                        }
+                        
+                        // Log when loading is supposed to complete
+                        if (percent >= 100) {
+                            console.log('Loading complete, should hide loading screen soon');
+                            document.getElementById('debug-log').innerHTML += `<p>Loading complete, should hide loading screen soon</p>`;
+                            
+                            // Check if the timeout is working
+                            setTimeout(() => {
+                                const loadingScreen = document.getElementById('loading-screen');
+                                console.log('Inside timeout after 100%:', loadingScreen ? 'Loading screen found' : 'Loading screen not found');
+                                document.getElementById('debug-log').innerHTML += `<p>Inside timeout after 100%: ${loadingScreen ? 'Loading screen found' : 'Loading screen not found'}</p>`;
+                                
+                                if (loadingScreen) {
+                                    console.log('Setting loading screen opacity to 0');
+                                    document.getElementById('debug-log').innerHTML += `<p>Setting loading screen opacity to 0</p>`;
+                                    loadingScreen.style.opacity = '0';
+                                    
+                                    setTimeout(() => {
+                                        console.log('Setting loading screen display to none');
+                                        document.getElementById('debug-log').innerHTML += `<p>Setting loading screen display to none</p>`;
+                                        loadingScreen.style.display = 'none';
+                                    }, 500);
+                                }
+                            }, 500);
+                        }
+                    };
+                    console.log('Wrapped updateLoadingProgress with debug logging');
+                    document.getElementById('debug-log').innerHTML += `<p>Wrapped updateLoadingProgress with debug logging</p>`;
+                }
+            }, 1000);
+        });
+    </script>
+</head>
+<body>
+    <div id="loading-screen">
+        <div class="loading-container">
+            <img src="../assets/logo.png" alt="Egg Emergency Logo" class="logo">
+            <div class="loading-bar-container">
+                <div class="loading-bar"></div>
+            </div>
+            <p>Loading Game Assets... <span id="load-percentage">0%</span></p>
+        </div>
+    </div>
+    
+    <div id="debug-container" style="position: fixed; bottom: 10px; left: 10px; right: 10px; height: 200px; background: rgba(0,0,0,0.8); color: white; overflow: auto; z-index: 9999; padding: 10px; font-family: monospace; font-size: 12px;">
+        <h3>Debug Log:</h3>
+        <div id="debug-log"></div>
+    </div>
+    
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+        
+        <div id="ui-container">
+            <div id="score-container">
+                <div class="player-score" id="player-score">
+                    <div class="player-icon human"></div>
+                    <div class="score-value">0</div>
+                </div>
+                <div class="player-score" id="ai1-score">
+                    <div class="player-icon novice"></div>
+                    <div class="score-value">0</div>
+                </div>
+                <div class="player-score" id="ai2-score">
+                    <div class="player-icon intermediate"></div>
+                    <div class="score-value">0</div>
+                </div>
+                <div class="player-score" id="ai3-score">
+                    <div class="player-icon expert"></div>
+                    <div class="score-value">0</div>
+                </div>
+            </div>
+            
+            <div id="timer-container">
+                <div id="timer">60</div>
+            </div>
+        </div>
+        
+        <div id="game-start-screen" class="game-screen">
+            <h1>Egg Emergency</h1>
+            <div class="menu-options">
+                <button id="start-game">Start Game</button>
+                <button id="tutorial">Tutorial</button>
+            </div>
+        </div>
+        
+        <div id="tutorial-screen" class="game-screen">
+            <h2>How to Play</h2>
+            <div class="tutorial-content">
+                <div class="tutorial-step">
+                    <img src="../assets/tutorial1.png" alt="Move left and right">
+                    <p>Move Chansey left and right to catch eggs</p>
+                </div>
+                <div class="tutorial-step">
+                    <img src="../assets/tutorial2.png" alt="Transfer eggs">
+                    <p>Transfer eggs to the basket</p>
+                </div>
+                <div class="tutorial-step">
+                    <img src="../assets/tutorial3.png" alt="Special eggs">
+                    <p>Golden eggs are worth 3 points! Avoid bomb eggs!</p>
+                </div>
+            </div>
+            <button id="back-to-menu">Back to Menu</button>
+        </div>
+        
+        <div id="game-over-screen" class="game-screen">
+            <h2>Game Over!</h2>
+            <div id="final-scores"></div>
+            <button id="play-again">Play Again</button>
+        </div>
+    </div>
+
+    <script src="../js/audio.js"></script>
+    <script src="../js/models.js"></script>
+    <script src="../js/ai.js"></script>
+    <script src="../js/particles.js"></script>
+    <script src="../js/game.js"></script>
+    <script src="../js/main.js"></script>
+    
+    <script>
+        // Additional debugging
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM fully loaded');
+            document.getElementById('debug-log').innerHTML += `<p>DOM fully loaded</p>`;
+            
+            setTimeout(() => {
+                console.log('Scripts loaded:');
+                document.getElementById('debug-log').innerHTML += `<p>Scripts loaded:</p>`;
+                
+                // Check if key functions exist
+                const functions = [
+                    'loadGameModels',
+                    'createChanseyModel',
+                    'updateLoadingProgress',
+                    'EggEmergencyGame'
+                ];
+                
+                functions.forEach(funcName => {
+                    const exists = typeof window[funcName] === 'function';
+                    console.log(`- ${funcName}: ${exists ? 'Found' : 'Not found'}`);
+                    document.getElementById('debug-log').innerHTML += `<p>- ${funcName}: ${exists ? 'Found' : 'Not found'}</p>`;
+                });
+                
+                // Check if Three.js is loaded
+                console.log(`- THREE: ${typeof THREE !== 'undefined' ? 'Found' : 'Not found'}`);
+                document.getElementById('debug-log').innerHTML += `<p>- THREE: ${typeof THREE !== 'undefined' ? 'Found' : 'Not found'}</p>`;
+                
+                // Check initialization of game
+                console.log(`- window.game: ${window.game ? 'Initialized' : 'Not initialized'}`);
+                document.getElementById('debug-log').innerHTML += `<p>- window.game: ${window.game ? 'Initialized' : 'Not initialized'}</p>`;
+            }, 2000);
+        });
+    </script>
+</body>
+</html> 
