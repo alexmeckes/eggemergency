@@ -50,18 +50,19 @@ function initializePlaceholderImages() {
         ctx.font = '16px Arial';
         
         switch(index) {
-            case 0: // Move Chansey
-                // Draw a Chansey-like shape
+            case 0: // Move and Jump
+                // Draw a character
                 ctx.beginPath();
                 ctx.arc(100, 100, 30, 0, Math.PI * 2); // Body
                 ctx.fill();
                 
-                // Draw arrow keys
+                // Draw arrow keys and space bar
                 ctx.fillStyle = 'black';
                 ctx.fillText('← →', 90, 75);
+                ctx.fillText('SPACE', 80, 120);
                 break;
                 
-            case 1: // Transfer eggs
+            case 1: // Catch and Transfer Eggs
                 // Draw an egg
                 ctx.beginPath();
                 ctx.ellipse(80, 80, 20, 25, 0, 0, Math.PI * 2);
@@ -81,9 +82,13 @@ function initializePlaceholderImages() {
                 ctx.moveTo(120, 80);
                 ctx.lineTo(115, 85);
                 ctx.stroke();
+                
+                // Draw E key
+                ctx.fillStyle = 'black';
+                ctx.fillText('E', 100, 120);
                 break;
                 
-            case 2: // Special eggs
+            case 2: // Special Eggs
                 // Draw a normal egg
                 ctx.fillStyle = 'white';
                 ctx.beginPath();

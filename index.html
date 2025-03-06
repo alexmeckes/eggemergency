@@ -44,9 +44,43 @@
                 </div>
             </div>
             
+            <div id="high-score">High Score: 0</div>
+            
+            <div id="difficulty-level">
+                <span>Difficulty</span>
+                <div class="difficulty-dots">
+                    <div class="difficulty-dot"></div>
+                    <div class="difficulty-dot"></div>
+                    <div class="difficulty-dot"></div>
+                    <div class="difficulty-dot"></div>
+                    <div class="difficulty-dot"></div>
+                </div>
+            </div>
+            
+            <div id="power-up-container">
+                <div class="power-up-indicator" id="speed-boost">
+                    <div class="power-up-icon" style="background: #FF0000;"></div>
+                    <div class="power-up-timer"></div>
+                </div>
+                <div class="power-up-indicator" id="egg-magnet">
+                    <div class="power-up-icon" style="background: #00FF00;"></div>
+                    <div class="power-up-timer"></div>
+                </div>
+                <div class="power-up-indicator" id="shield">
+                    <div class="power-up-icon" style="background: #0000FF;"></div>
+                    <div class="power-up-timer"></div>
+                </div>
+            </div>
+            
             <div id="timer-container">
                 <div id="timer">60</div>
             </div>
+            
+            <div id="stats-display"></div>
+            
+            <div class="ai-ability-indicator ai1" title="Novice AI - Egg Shield">🛡️</div>
+            <div class="ai-ability-indicator ai2" title="Intermediate AI - Egg Magnet">🧲</div>
+            <div class="ai-ability-indicator ai3" title="Expert AI - Golden Touch">✨</div>
         </div>
         
         <div id="game-start-screen" class="game-screen">
@@ -61,16 +95,16 @@
             <h2>How to Play</h2>
             <div class="tutorial-content">
                 <div class="tutorial-step">
-                    <img src="assets/tutorial1.png" alt="Move left and right">
-                    <p>Move Chansey left and right to catch eggs</p>
+                    <img src="assets/tutorial1.png" alt="Move and jump">
+                    <p>Use arrow keys to move left and right, SPACE to jump (double jump available!)</p>
                 </div>
                 <div class="tutorial-step">
-                    <img src="assets/tutorial2.png" alt="Transfer eggs">
-                    <p>Transfer eggs to the basket</p>
+                    <img src="assets/tutorial2.png" alt="Catch and transfer eggs">
+                    <p>Catch eggs and press E to transfer them to your basket. Chain transfers for combos!</p>
                 </div>
                 <div class="tutorial-step">
-                    <img src="assets/tutorial3.png" alt="Special eggs">
-                    <p>Golden eggs are worth 3 points! Avoid bomb eggs!</p>
+                    <img src="assets/tutorial3.png" alt="Special eggs and power-ups">
+                    <p>Golden eggs are worth 3 points! Avoid bomb eggs! Collect power-ups for special abilities.</p>
                 </div>
             </div>
             <button id="back-to-menu">Back to Menu</button>

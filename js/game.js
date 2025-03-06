@@ -60,6 +60,95 @@ class EggEmergencyGame {
         this.handleKeyDown = this.handleKeyDown.bind(this);
         this.handleKeyUp = this.handleKeyUp.bind(this);
         
+        // Add physics properties for jumping
+        this.playerVelocity = new THREE.Vector3();
+        this.isJumping = false;
+        this.jumpForce = 0.5;
+        this.gravity = 0.02;
+        this.groundLevel = 0;
+        
+        // Add egg storage for manual transfer
+        this.playerEggs = [];
+        this.maxEggs = 3; // Maximum eggs player can carry
+        
+        // Add transfer cooldown
+        this.transferCooldown = 0;
+        this.transferCooldownTime = 0.5; // Seconds between transfers
+        
+        // Add power-up properties
+        this.powerUps = {
+            speedBoost: { active: false, duration: 0 },
+            eggMagnet: { active: false, duration: 0 },
+            shield: { active: false, duration: 0 }
+        };
+        
+        // Add combo system
+        this.combo = 0;
+        this.maxCombo = 0;
+        this.comboMultiplier = 1;
+        this.comboTimeout = 0;
+        
+        // Add double jump
+        this.canDoubleJump = false;
+        this.hasDoubleJumped = false;
+        
+        // Add high score
+        this.highScore = localStorage.getItem('eggEmergencyHighScore') || 0;
+        
+        // Add AI special abilities
+        this.aiAbilities = {
+            ai1: { // Novice AI
+                name: 'Egg Shield',
+                cooldown: 0,
+                duration: 0,
+                active: false
+            },
+            ai2: { // Intermediate AI
+                name: 'Egg Magnet',
+                cooldown: 0,
+                duration: 0,
+                active: false
+            },
+            ai3: { // Expert AI
+                name: 'Golden Touch',
+                cooldown: 0,
+                duration: 0,
+                active: false
+            }
+        };
+        
+        // Add achievement system
+        this.achievements = {
+            firstEgg: { name: 'First Egg!', description: 'Catch your first egg', earned: false },
+            goldenMaster: { name: 'Golden Master', description: 'Catch 10 golden eggs', earned: false },
+            comboKing: { name: 'Combo King', description: 'Achieve a 5x combo', earned: false },
+            speedDemon: { name: 'Speed Demon', description: 'Use speed boost 3 times', earned: false },
+            perfectGame: { name: 'Perfect Game', description: 'Win without dropping any eggs', earned: false }
+        };
+        
+        // Load achievements from localStorage
+        const savedAchievements = localStorage.getItem('eggEmergencyAchievements');
+        if (savedAchievements) {
+            this.achievements = JSON.parse(savedAchievements);
+        }
+        
+        // Add difficulty scaling
+        this.difficultyScaling = {
+            eggSpawnRate: 1,
+            eggSpeed: 1,
+            powerUpSpawnRate: 1,
+            aiAbilityCooldown: 1
+        };
+        
+        // Add game statistics
+        this.stats = {
+            eggsCaught: 0,
+            goldenEggsCaught: 0,
+            eggsDropped: 0,
+            powerUpsCollected: 0,
+            combosAchieved: 0
+        };
+        
         // Initialize the game
         this.init();
     }
@@ -72,6 +161,16 @@ class EggEmergencyGame {
         this.setupEventListeners();
         this.initAI();
         this.loadAudio();
+        
+        // Add key listeners for jumping and egg transfer
+        document.addEventListener('keydown', (event) => {
+            if (event.code === 'Space' && !this.isJumping) {
+                this.jump();
+            }
+            if (event.code === 'KeyE' && this.playerEggs.length > 0) {
+                this.transferEggs();
+            }
+        });
         
         // Start the render loop
         this.animate();
@@ -788,6 +887,97 @@ class EggEmergencyGame {
         this.updateParticles(deltaTime);
         this.updateClouds(deltaTime);
         this.updatePlayerAnimations(deltaTime);
+        
+        // Update player physics
+        if (this.isJumping) {
+            this.playerVelocity.y -= this.gravity;
+            this.players.human.position.y += this.playerVelocity.y;
+            
+            // Check for ground collision
+            if (this.players.human.position.y <= this.groundLevel) {
+                this.players.human.position.y = this.groundLevel;
+                this.playerVelocity.y = 0;
+                this.isJumping = false;
+            }
+        }
+        
+        // Update transfer cooldown
+        if (this.transferCooldown > 0) {
+            this.transferCooldown -= deltaTime;
+        }
+        
+        // Update egg catching logic
+        this.eggs.forEach((egg, index) => {
+            if (this.checkCollision(this.players.human, egg) && this.playerEggs.length < this.maxEggs) {
+                // Catch egg
+                this.playerEggs.push({
+                    type: egg.eggType,
+                    mesh: egg
+                });
+                
+                // Remove egg from scene
+                this.scene.remove(egg);
+                this.eggs.splice(index, 1);
+                
+                // Play catch sound
+                if (this.sounds.eggCatch) {
+                    this.sounds.eggCatch.play();
+                }
+                
+                // Create particle effect
+                this.createCatchEffect(egg.position);
+            }
+        });
+        
+        // Update egg storage display
+        this.updateEggStorageDisplay();
+        
+        // Update power-ups
+        this.updatePowerUps(deltaTime);
+        
+        // Update combo
+        this.updateCombo(deltaTime);
+        
+        // Spawn power-ups
+        if (Math.random() < 0.01) { // 1% chance per frame
+            this.spawnPowerUp();
+        }
+        
+        // Check for power-up collection
+        Object.values(this.powerUps).forEach(powerUp => {
+            if (powerUp.mesh) {
+                const distance = this.players.human.position.distanceTo(powerUp.mesh.position);
+                if (distance < 1) {
+                    this.collectPowerUp(powerUp.mesh);
+                }
+            }
+        });
+        
+        // Apply power-up effects
+        if (this.powerUps.speedBoost.active) {
+            this.moveSpeed *= 1.5;
+        }
+        
+        if (this.powerUps.eggMagnet.active) {
+            this.eggs.forEach(egg => {
+                const direction = new THREE.Vector3()
+                    .subVectors(this.players.human.position, egg.position)
+                    .normalize();
+                egg.position.add(direction.multiplyScalar(0.1));
+            });
+        }
+        
+        // Update difficulty
+        this.updateDifficulty();
+        
+        // Update AI abilities
+        this.updateAIAbilities(deltaTime);
+        
+        // Check achievements
+        this.checkAchievements();
+        
+        // Update stats display
+        this.updateStatsDisplay();
     }
     
     animate() {
@@ -801,6 +991,478 @@ class EggEmergencyGame {
         
         // Render scene
         this.renderer.render(this.scene, this.camera);
+    }
+    
+    jump() {
+        if (!this.isJumping) {
+            this.isJumping = true;
+            this.playerVelocity.y = this.jumpForce;
+            this.canDoubleJump = true;
+            this.hasDoubleJumped = false;
+            
+            // Create jump particles
+            this.createJumpEffect();
+        } else if (this.canDoubleJump && !this.hasDoubleJumped) {
+            this.playerVelocity.y = this.jumpForce * 0.8;
+            this.hasDoubleJumped = true;
+            this.canDoubleJump = false;
+            
+            // Create double jump particles
+            this.createJumpEffect(true);
+        }
+    }
+    
+    createJumpEffect(isDoubleJump = false) {
+        const particleCount = isDoubleJump ? 8 : 12;
+        const color = isDoubleJump ? 0x00FFFF : 0xFFFFFF;
+        
+        for (let i = 0; i < particleCount; i++) {
+            const particle = new THREE.Mesh(
+                new THREE.SphereGeometry(0.1, 8, 8),
+                new THREE.MeshStandardMaterial({ color: color })
+            );
+            
+            particle.position.copy(this.players.human.position);
+            particle.position.y += 0.5;
+            
+            const angle = (i / particleCount) * Math.PI * 2;
+            const speed = 0.2;
+            const lifetime = 0.5 + Math.random() * 0.5;
+            
+            particle.userData = {
+                velocity: new THREE.Vector3(
+                    Math.cos(angle) * speed,
+                    Math.random() * speed,
+                    Math.sin(angle) * speed
+                ),
+                lifetime: lifetime,
+                update: (deltaTime) => {
+                    particle.position.add(particle.userData.velocity);
+                    particle.userData.lifetime -= deltaTime;
+                    return particle.userData.lifetime > 0;
+                }
+            };
+            
+            this.scene.add(particle);
+            this.particles.push(particle);
+        }
+    }
+    
+    spawnPowerUp() {
+        if (Math.random() < 0.1) { // 10% chance to spawn power-up
+            const powerUpTypes = ['speedBoost', 'eggMagnet', 'shield'];
+            const type = powerUpTypes[Math.floor(Math.random() * powerUpTypes.length)];
+            
+            const powerUp = new THREE.Mesh(
+                new THREE.OctahedronGeometry(0.5, 0),
+                new THREE.MeshStandardMaterial({
+                    color: this.getPowerUpColor(type),
+                    emissive: this.getPowerUpColor(type),
+                    emissiveIntensity: 0.5
+                })
+            );
+            
+            // Position power-up above the arena
+            powerUp.position.set(
+                (Math.random() - 0.5) * 20,
+                15,
+                (Math.random() - 0.5) * 20
+            );
+            
+            powerUp.userData = { type: type };
+            this.scene.add(powerUp);
+            this.powerUps[type].mesh = powerUp;
+        }
+    }
+    
+    getPowerUpColor(type) {
+        switch(type) {
+            case 'speedBoost': return 0xFF0000;
+            case 'eggMagnet': return 0x00FF00;
+            case 'shield': return 0x0000FF;
+            default: return 0xFFFFFF;
+        }
+    }
+    
+    collectPowerUp(powerUp) {
+        const type = powerUp.userData.type;
+        this.powerUps[type].active = true;
+        this.powerUps[type].duration = 10; // 10 seconds duration
+        
+        // Play power-up sound
+        if (this.sounds.powerUp) {
+            this.sounds.powerUp.play();
+        }
+        
+        // Create collection effect
+        this.createPowerUpEffect(powerUp.position, type);
+        
+        // Remove power-up from scene
+        this.scene.remove(powerUp);
+        this.powerUps[type].mesh = null;
+    }
+    
+    createPowerUpEffect(position, type) {
+        const particleCount = 20;
+        const color = this.getPowerUpColor(type);
+        
+        for (let i = 0; i < particleCount; i++) {
+            const particle = new THREE.Mesh(
+                new THREE.SphereGeometry(0.1, 8, 8),
+                new THREE.MeshStandardMaterial({ color: color })
+            );
+            
+            particle.position.copy(position);
+            
+            const angle = (i / particleCount) * Math.PI * 2;
+            const speed = 0.3;
+            const lifetime = 1 + Math.random() * 0.5;
+            
+            particle.userData = {
+                velocity: new THREE.Vector3(
+                    Math.cos(angle) * speed,
+                    Math.random() * speed,
+                    Math.sin(angle) * speed
+                ),
+                lifetime: lifetime,
+                update: (deltaTime) => {
+                    particle.position.add(particle.userData.velocity);
+                    particle.userData.lifetime -= deltaTime;
+                    return particle.userData.lifetime > 0;
+                }
+            };
+            
+            this.scene.add(particle);
+            this.particles.push(particle);
+        }
+    }
+    
+    updatePowerUps(deltaTime) {
+        Object.keys(this.powerUps).forEach(type => {
+            if (this.powerUps[type].active) {
+                this.powerUps[type].duration -= deltaTime;
+                
+                if (this.powerUps[type].duration <= 0) {
+                    this.powerUps[type].active = false;
+                    // Play power-down sound
+                    if (this.sounds.powerDown) {
+                        this.sounds.powerDown.play();
+                    }
+                }
+            }
+        });
+    }
+    
+    updateCombo(deltaTime) {
+        if (this.comboTimeout > 0) {
+            this.comboTimeout -= deltaTime;
+            if (this.comboTimeout <= 0) {
+                this.combo = 0;
+                this.comboMultiplier = 1;
+            }
+        }
+    }
+    
+    transferEggs() {
+        if (this.transferCooldown > 0) return;
+        
+        // Transfer all eggs to basket
+        let points = 0;
+        this.playerEggs.forEach(egg => {
+            if (egg.type === 'golden') points += 3;
+            else if (egg.type === 'bomb') points -= 2;
+            else points += 1;
+        });
+        
+        // Apply combo multiplier
+        points *= this.comboMultiplier;
+        
+        // Update score
+        this.scores.player += points;
+        this.updateScore('human');
+        
+        // Update combo
+        this.combo++;
+        this.maxCombo = Math.max(this.maxCombo, this.combo);
+        this.comboMultiplier = 1 + (this.combo - 1) * 0.2; // 20% increase per combo
+        this.comboTimeout = 3; // Reset combo after 3 seconds
+        
+        // Update high score
+        if (this.scores.player > this.highScore) {
+            this.highScore = this.scores.player;
+            localStorage.setItem('eggEmergencyHighScore', this.highScore);
+        }
+        
+        // Clear eggs and start cooldown
+        this.playerEggs = [];
+        this.transferCooldown = this.transferCooldownTime;
+        
+        // Play transfer sound
+        if (this.sounds.eggCatch) {
+            this.sounds.eggCatch.play();
+        }
+        
+        // Create combo effect
+        this.createComboEffect();
+    }
+    
+    createComboEffect() {
+        const comboText = document.createElement('div');
+        comboText.className = 'combo-text';
+        comboText.textContent = `${this.combo}x COMBO!`;
+        document.getElementById('ui-container').appendChild(comboText);
+        
+        // Animate and remove
+        setTimeout(() => {
+            comboText.remove();
+        }, 1000);
+    }
+    
+    updateEggStorageDisplay() {
+        // Create or update the egg storage display
+        let storageDisplay = document.getElementById('egg-storage');
+        if (!storageDisplay) {
+            storageDisplay = document.createElement('div');
+            storageDisplay.id = 'egg-storage';
+            document.getElementById('ui-container').appendChild(storageDisplay);
+        }
+        
+        // Update display content
+        storageDisplay.innerHTML = `
+            <div class="egg-storage-title">Egg Storage (${this.playerEggs.length}/${this.maxEggs})</div>
+            <div class="egg-storage-content">
+                ${this.playerEggs.map(egg => `
+                    <div class="egg-icon ${egg.type}"></div>
+                `).join('')}
+            </div>
+            <div class="egg-storage-hint">Press E to transfer eggs</div>
+        `;
+    }
+    
+    updateDifficulty() {
+        // Scale difficulty based on time and score
+        const timeFactor = 1 + (60 - this.timeRemaining) / 60;
+        const scoreFactor = 1 + this.scores.player / 100;
+        
+        this.difficultyScaling = {
+            eggSpawnRate: timeFactor * 1.2,
+            eggSpeed: timeFactor * 1.1,
+            powerUpSpawnRate: timeFactor * 0.8,
+            aiAbilityCooldown: Math.max(0.5, 1 - (scoreFactor - 1) * 0.2)
+        };
+    }
+    
+    updateAIAbilities(deltaTime) {
+        Object.keys(this.aiAbilities).forEach(aiKey => {
+            const ability = this.aiAbilities[aiKey];
+            if (ability.cooldown > 0) {
+                ability.cooldown -= deltaTime;
+            }
+            if (ability.duration > 0) {
+                ability.duration -= deltaTime;
+                if (ability.duration <= 0) {
+                    ability.active = false;
+                }
+            }
+        });
+    }
+    
+    activateAIAbility(aiKey) {
+        const ability = this.aiAbilities[aiKey];
+        if (ability.cooldown > 0) return;
+        
+        switch(aiKey) {
+            case 'ai1': // Novice AI - Egg Shield
+                ability.active = true;
+                ability.duration = 5;
+                ability.cooldown = 15;
+                this.createAIShieldEffect(this.players.ai1);
+                break;
+                
+            case 'ai2': // Intermediate AI - Egg Magnet
+                ability.active = true;
+                ability.duration = 8;
+                ability.cooldown = 20;
+                this.createAIMagnetEffect(this.players.ai2);
+                break;
+                
+            case 'ai3': // Expert AI - Golden Touch
+                ability.active = true;
+                ability.duration = 10;
+                ability.cooldown = 25;
+                this.createAIGoldenEffect(this.players.ai3);
+                break;
+        }
+    }
+    
+    createAIShieldEffect(player) {
+        const shield = new THREE.Mesh(
+            new THREE.SphereGeometry(2, 16, 16),
+            new THREE.MeshStandardMaterial({
+                color: 0x00FFFF,
+                transparent: true,
+                opacity: 0.3,
+                emissive: 0x00FFFF,
+                emissiveIntensity: 0.5
+            })
+        );
+        shield.position.copy(player.position);
+        this.scene.add(shield);
+        
+        // Animate shield
+        const duration = 5;
+        const startTime = performance.now();
+        
+        shield.userData = {
+            update: (deltaTime) => {
+                const elapsed = (performance.now() - startTime) / 1000;
+                if (elapsed >= duration) {
+                    this.scene.remove(shield);
+                    return false;
+                }
+                
+                shield.scale.setScalar(1 + Math.sin(elapsed * 4) * 0.1);
+                shield.material.opacity = 0.3 + Math.sin(elapsed * 2) * 0.1;
+                return true;
+            }
+        };
+        
+        this.particles.push(shield);
+    }
+    
+    createAIMagnetEffect(player) {
+        const magnet = new THREE.Mesh(
+            new THREE.TorusGeometry(1, 0.2, 16, 32),
+            new THREE.MeshStandardMaterial({
+                color: 0x00FF00,
+                emissive: 0x00FF00,
+                emissiveIntensity: 0.5
+            })
+        );
+        magnet.position.copy(player.position);
+        magnet.rotation.x = Math.PI / 2;
+        this.scene.add(magnet);
+        
+        // Animate magnet
+        const duration = 8;
+        const startTime = performance.now();
+        
+        magnet.userData = {
+            update: (deltaTime) => {
+                const elapsed = (performance.now() - startTime) / 1000;
+                if (elapsed >= duration) {
+                    this.scene.remove(magnet);
+                    return false;
+                }
+                
+                magnet.rotation.z += deltaTime * 2;
+                return true;
+            }
+        };
+        
+        this.particles.push(magnet);
+    }
+    
+    createAIGoldenEffect(player) {
+        const golden = new THREE.Mesh(
+            new THREE.OctahedronGeometry(1.5, 0),
+            new THREE.MeshStandardMaterial({
+                color: 0xFFD700,
+                emissive: 0xFFD700,
+                emissiveIntensity: 0.5
+            })
+        );
+        golden.position.copy(player.position);
+        this.scene.add(golden);
+        
+        // Animate golden effect
+        const duration = 10;
+        const startTime = performance.now();
+        
+        golden.userData = {
+            update: (deltaTime) => {
+                const elapsed = (performance.now() - startTime) / 1000;
+                if (elapsed >= duration) {
+                    this.scene.remove(golden);
+                    return false;
+                }
+                
+                golden.rotation.x += deltaTime;
+                golden.rotation.y += deltaTime;
+                return true;
+            }
+        };
+        
+        this.particles.push(golden);
+    }
+    
+    checkAchievements() {
+        // First Egg
+        if (this.stats.eggsCaught === 1) {
+            this.unlockAchievement('firstEgg');
+        }
+        
+        // Golden Master
+        if (this.stats.goldenEggsCaught >= 10) {
+            this.unlockAchievement('goldenMaster');
+        }
+        
+        // Combo King
+        if (this.maxCombo >= 5) {
+            this.unlockAchievement('comboKing');
+        }
+        
+        // Speed Demon
+        if (this.stats.powerUpsCollected >= 3) {
+            this.unlockAchievement('speedDemon');
+        }
+        
+        // Perfect Game
+        if (this.stats.eggsDropped === 0 && this.timeRemaining <= 0) {
+            this.unlockAchievement('perfectGame');
+        }
+    }
+    
+    unlockAchievement(achievementKey) {
+        if (this.achievements[achievementKey].earned) return;
+        
+        this.achievements[achievementKey].earned = true;
+        localStorage.setItem('eggEmergencyAchievements', JSON.stringify(this.achievements));
+        
+        // Show achievement notification
+        this.showAchievementNotification(achievementKey);
+    }
+    
+    showAchievementNotification(achievementKey) {
+        const achievement = this.achievements[achievementKey];
+        const notification = document.createElement('div');
+        notification.className = 'achievement-notification';
+        notification.innerHTML = `
+            <div class="achievement-icon">🏆</div>
+            <div class="achievement-content">
+                <div class="achievement-title">${achievement.name}</div>
+                <div class="achievement-description">${achievement.description}</div>
+            </div>
+        `;
+        
+        document.getElementById('ui-container').appendChild(notification);
+        
+        // Animate and remove
+        setTimeout(() => {
+            notification.remove();
+        }, 5000);
+    }
+    
+    updateStatsDisplay() {
+        const statsDisplay = document.getElementById('stats-display');
+        if (!statsDisplay) return;
+        
+        statsDisplay.innerHTML = `
+            <div class="stats-item">Eggs Caught: ${this.stats.eggsCaught}</div>
+            <div class="stats-item">Golden Eggs: ${this.stats.goldenEggsCaught}</div>
+            <div class="stats-item">Max Combo: ${this.maxCombo}x</div>
+            <div class="stats-item">Power-ups: ${this.stats.powerUpsCollected}</div>
+        `;
     }
 }
 
